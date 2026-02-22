@@ -444,9 +444,29 @@
 
     // doxxes (read-only) - built-in files only
     const doxxFiles = [
-      { path: 'doxxes/vaibhav.txt', name: 'Vaibhav Singh' },
-      { path: 'doxxes/kitsumeee.txt', name: 'Mr.Kitsumeee' },
+      { path: 'doxxes/vaibhav.txt', name: 'Vaibhav Singh', pinned: false },
+      { path: 'doxxes/kitsumeee.txt', name: 'Mr.Kitsumeee', pinned: false },
+      { path: 'doxxes/howto.txt', name: 'Want to add a dox?', pinned: true },
     ];
+
+    // Load pinned state from localStorage
+    function loadPinnedState() {
+      const saved = localStorage.getItem('pinnedDoxxes');
+      if (saved) {
+        try {
+          const pinned = JSON.parse(saved);
+          doxxFiles.forEach(f => {
+            f.pinned = pinned.includes(f.path);
+          });
+        } catch (e) { console.error('Error loading pinned state:', e); }
+      }
+    }
+
+    // Save pinned state to localStorage
+    function savePinnedState() {
+      const pinned = doxxFiles.filter(f => f.pinned).map(f => f.path);
+      localStorage.setItem('pinnedDoxxes', JSON.stringify(pinned));
+    }
 
     function renderDoxxes(filter = '') {
       const list = document.getElementById('fileList');
@@ -455,13 +475,21 @@
       if (!list) return;
       list.innerHTML = '';
       const q = (filter || '').toLowerCase().trim();
-      doxxFiles.forEach(f => {
+      
+      // Sort files: pinned first, then rest
+      const sorted = [...doxxFiles].sort((a, b) => {
+        if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+        return 0;
+      });
+
+      sorted.forEach(f => {
         if (q && !f.name.toLowerCase().includes(q)) return;
+        
         const b = document.createElement('button');
-        b.className = 'btn secondary';
+        b.className = 'btn secondary doxx-item';
         b.style.textAlign = 'left';
         b.style.width = '100%';
-        b.textContent = f.name;
+        b.innerHTML = (f.pinned ? '📌 ' : '') + f.name;
         b.onclick = () => {
           title.textContent = f.name;
           viewer.textContent = 'Loading...';
@@ -476,6 +504,7 @@
               viewer.textContent = 'Unable to load file: ' + (err && err.message ? err.message : 'unknown error');
             });
         };
+        
         list.appendChild(b);
       });
     }
@@ -492,6 +521,7 @@
     });
 
     // Initial render and reveal
+    loadPinnedState();
     renderHall();
     renderStaff();
     renderDoxxes();
